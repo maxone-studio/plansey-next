@@ -1,0 +1,36 @@
+{
+  "title": "Plansey – Your Wedding Planning",
+  "description": "Plan your dream wedding with Plansey. Find vendors, manage guests, budget and tasks.",
+  "tagline": "Your Wedding. Your Plan.",
+  "hero": {
+    "headline": "Plan Your Dream Wedding",
+    "subheadline": "Everything you need – tasks, budget, guests and the best vendors near you.",
+    "cta_planner": "Start for free",
+    "cta_vendor": "Register as vendor",
+    "cta_stories": "Discover wedding inspiration"
+  },
+  "features": {
+    "title": "Everything for your perfect wedding",
+    "checklist": {
+      "title": "Checklist & Tasks",
+      "description": "Stay on top of everything with our smart task list – from planning to the big day."
+    },
+    "budget": {
+      "title": "Budget Management",
+      "description": "Plan your budget and track costs – planned vs. actual."
+    },
+    "guests": {
+      "title": "Guest List & RSVP",
+      "description": "Manage your guests, send RSVP links and plan the seating chart."
+    },
+    "vendors": {
+      "title": "Find Vendors",
+      "description": "Discover photographers, florists, venues and more near you."
+    }
+  },
+  "stats": {
+    "vendors": "Vendors",
+    "stories": "Wedding Stories",
+    "couples": "Happy Couples"
+  }
+}

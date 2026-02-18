@@ -1,0 +1,984 @@
+// Plansey – Full Database Schema
+// Generated from legacy MySQL analysis + TDC
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum DefaultAccount {
+  planner
+  storyteller
+  vendor
+}
+
+enum VendorType {
+  Premium
+  Basic
+  BasicPlus
+  Unclaimed
+}
+
+enum PremiumRequestType {
+  free
+  three   // 3 months
+  six     // 6 months
+  twelve  // 12 months
+}
+
+enum TaskStatus {
+  New
+  Inprogress
+  Done
+}
+
+enum RsvpStatus {
+  Yes
+  No
+  Pending
+}
+
+enum AttendStatus {
+  Rejected
+  Added
+  Replaced
+}
+
+enum WeddingInfoType {
+  Bride
+  Groom
+  MaidOfHonor
+  BestMan
+}
+
+enum MessageSenderType {
+  planner
+  storyteller
+  vendor
+}
+
+enum SurveyStatus {
+  Yes
+  No
+  Later
+}
+
+enum TaskViewMode {
+  LIST_SHOW
+  LIST_HIDE
+  GRID_SHOW
+  GRID_HIDE
+}
+
+enum QuestionType {
+  radio
+  dropdown
+  subheader
+  checkbox
+}
+
+enum GuestType {
+  adult
+  child
+}
+
+enum CouponUnit {
+  Percent
+  Amount
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+model User {
+  id                  Int             @id @default(autoincrement())
+  email               String          @unique @db.VarChar(100)
+  password            String?         @db.VarChar(255)
+  firstName           String?         @map("first_name") @db.VarChar(30)
+  lastName            String?         @map("last_name") @db.VarChar(30)
+  authKey             String          @map("auth_key") @db.VarChar(32)
+  passwordResetToken  String?         @map("password_reset_token") @db.VarChar(255)
+  isFirstLogin        Boolean         @default(true) @map("is_first_login")
+  isActive            Boolean         @default(true) @map("is_active")
+  isSubscribed        Boolean         @default(false) @map("is_subscribed")
+  acceptedAgb         Boolean         @default(false) @map("accepted_agb")
+  defaultAccount      DefaultAccount? @map("default_account")
+  createdAt           DateTime        @default(now()) @map("created_dt")
+  updatedAt           DateTime?       @updatedAt @map("updated_dt")
+
+  planner             Planner?
+  storyteller         Storyteller?
+  vendor              Vendor?
+  weddingsCreated     Wedding[]
+  messages            Message[]       @relation("MessageSender")
+  receivedMessages    Message[]       @relation("MessageReceiver")
+  vendorLikes         VendorLike[]
+  vendorClaims        VendorClaim[]
+  weddingStories      WeddingStory[]
+  analytics           Analytics[]
+  storyAnalytics      StoryAnalytics[]
+  taskAnalytics       WeddingTaskAnalytics[]
+  feedback            Feedback[]
+  affiliateAnalytics  AffiliateAnalytics[]
+  cashbacks           Cashback[]
+
+  @@map("user")
+}
+
+model Admin {
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique @db.VarChar(100)
+  password           String?   @db.VarChar(255)
+  authKey            String    @map("auth_key") @db.VarChar(32)
+  passwordResetToken String?   @map("password_reset_token") @db.VarChar(255)
+  status             Boolean   @default(true)
+  createdAt          DateTime  @default(now()) @map("created_dt")
+
+  @@map("admin")
+}
+
+model Planner {
+  id         Int          @id @default(autoincrement())
+  userId     Int          @unique @map("user_id")
+  firstName  String?      @map("first_name") @db.VarChar(30)
+  lastName   String?      @map("last_name") @db.VarChar(30)
+  isActive   Boolean      @default(true) @map("is_active")
+  isSurveyed SurveyStatus @default(Later) @map("is_surveyed")
+  createdAt  DateTime?    @default(now()) @map("created_dt")
+  updatedAt  DateTime?    @updatedAt @map("updated_dt")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weddingPlanners WeddingPlanner[]
+
+  @@map("planner")
+}
+
+model Storyteller {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique @map("user_id")
+  firstName String?   @map("first_name") @db.VarChar(30)
+  lastName  String?   @map("last_name") @db.VarChar(30)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime? @default(now()) @map("created_dt")
+  updatedAt DateTime? @updatedAt @map("updated_dt")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("storyteller")
+}
+
+// ============================================================
+// VENDOR
+// ============================================================
+
+model Vendor {
+  id                  Int                @id @default(autoincrement())
+  userId              Int                @map("user_id")
+  name                String             @db.VarChar(100)
+  email               String             @db.VarChar(100)
+  phone               String?            @db.VarChar(24)
+  logo                String?            @db.VarChar(100)
+  coverphoto          String?            @db.VarChar(100)
+  coverphotoPosiiton  String?            @map("coverphoto_position") @db.VarChar(25)
+  alias               String?            @unique @db.VarChar(30)
+  website             String?            @db.VarChar(255)
+  type                VendorType         @default(Basic)
+  description         String?            @db.VarChar(140)
+  additionalInfo      String?            @map("additional_info") @db.VarChar(1400)
+  premiumrequestType  PremiumRequestType @default(free) @map("premiumrequest_type")
+  premiumRequested    Boolean            @default(false) @map("premium_requested")
+  premiumApprovedAt   DateTime?          @map("premium_approved_dt")
+  isDowngraded        Boolean            @default(false) @map("is_downgraded")
+  isReferred          Boolean            @default(false) @map("is_referred")
+  referredBy          Int?               @map("referred_by")
+  isActive            Boolean            @default(true) @map("is_active")
+  isStartPage         Boolean            @default(false) @map("is_start_page")
+  isOnline            Boolean            @default(false) @map("is_online")
+  isFirstLogin        Boolean            @default(true) @map("is_first_login")
+  isSurveyed          SurveyStatus       @default(Later) @map("is_surveyed")
+  approvedBy          Int?               @map("approved_by")
+  approvedAt          DateTime?          @map("approved_dt")
+  isDeleted           Boolean            @default(false) @map("is_deleted")
+  createdAt           DateTime?          @default(now()) @map("created_dt")
+  updatedAt           DateTime?          @updatedAt @map("updated_dt")
+
+  user                    User                         @relation(fields: [userId], references: [id])
+  addresses               VendorAddress[]
+  categories              VendorCategory[]
+  photos                  VendorPhoto[]
+  likes                   VendorLike[]
+  claims                  VendorClaim[]
+  deals                   VendorDeal[]
+  typeHistory             VendorTypeHistory[]
+  mergesAsMaster          VendorMerge[]                @relation("MasterVendor")
+  mergesAsMerged          VendorMerge[]                @relation("MergedVendor")
+  weddingTasks            WeddingTask[]
+  storyPhotoTags          WeddingStoryPhotoTag[]
+  storyVendors            WeddingStoryVendor[]
+  analytics               Analytics[]
+  categoryQuestionAnswers CategoryQuestionAnswer[]
+  budgetPlacements        BudgetVendorPlacement[]
+
+  @@map("vendor")
+}
+
+model VendorAddress {
+  id                 Int       @id @default(autoincrement())
+  vendorId           Int       @map("vendor_id")
+  street             String?   @db.VarChar(100)
+  streetNo           String?   @map("street_no") @db.VarChar(30)
+  zipcode            String?   @db.VarChar(10)
+  location           String    @db.VarChar(255)
+  lat                Decimal?  @db.Decimal(10, 8)
+  lng                Decimal?  @db.Decimal(10, 8)
+  additionalLocation String?   @map("additional_location") @db.VarChar(255)
+  createdAt          DateTime? @default(now()) @map("created_dt")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_address")
+}
+
+model VendorCategory {
+  id         Int @id @default(autoincrement())
+  vendorId   Int @map("vendor_id")
+  categoryId Int @map("category_id")
+
+  vendor   Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_category")
+}
+
+model VendorPhoto {
+  id         Int       @id @default(autoincrement())
+  vendorId   Int       @map("vendor_id")
+  photoName  String    @map("photo_name") @db.VarChar(100)
+  size       Float
+  order      Int?      @db.SmallInt
+  isApproved Boolean   @default(true) @map("is_approved")
+  approvedBy Int?      @map("approved_by")
+  approvedAt DateTime? @map("approved_dt")
+  createdAt  DateTime  @default(now()) @map("created_dt")
+
+  vendor Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  likes  VendorPhotoLikes[]
+  tags   VendorPhotoTag[]
+
+  @@map("vendor_photo")
+}
+
+model VendorPhotoLikes {
+  id        Int       @id @default(autoincrement())
+  photoId   Int       @map("photo_id")
+  userId    Int       @map("user_id")
+  createdAt DateTime? @default(now()) @map("created_dt")
+
+  photo VendorPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_photo_likes")
+}
+
+model VendorPhotoTag {
+  id         Int      @id @default(autoincrement())
+  photoId    Int      @map("photo_id")
+  vendorId   Int      @map("vendor_id")
+  categoryId Int      @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_dt")
+
+  photo    VendorPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  vendor   Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_photo_tag")
+}
+
+model VendorLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  vendorId  Int      @map("vendor_id")
+  createdAt DateTime @default(now()) @map("created_dt")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vendorId])
+  @@map("vendor_like")
+}
+
+model VendorClaim {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  vendorId   Int       @map("vendor_id")
+  isApproved Boolean   @default(false) @map("is_approved")
+  approvedBy Int?      @map("approved_by")
+  rejectReason String? @map("reject_reason") @db.VarChar(500)
+  createdAt  DateTime? @default(now()) @map("created_dt")
+
+  user   User   @relation(fields: [userId], references: [id])
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_claim")
+}
+
+model VendorDeal {
+  id            Int       @id @default(autoincrement())
+  vendorId      Int       @map("vendor_id")
+  discount      String    @db.VarChar(10)
+  discountTag   String    @default("Deal") @map("discount_tag") @db.VarChar(10)
+  discountTitle String    @map("discount_title") @db.VarChar(50)
+  startDate     DateTime  @map("start_date") @db.Date
+  endDate       DateTime  @map("end_date") @db.Date
+  discountCode  String    @map("discount_code") @db.VarChar(15)
+  description   String?   @db.VarChar(500)
+  conditions    String?   @db.VarChar(500)
+  isActive      Boolean   @default(true) @map("is_active")
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  createdAt     DateTime? @default(now()) @map("created_dt")
+  updatedAt     DateTime? @updatedAt @map("updated_dt")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@map("vendor_deal")
+}
+
+model VendorMerge {
+  id        Int      @id @default(autoincrement())
+  masterId  Int      @map("master_id")
+  mergeId   Int      @map("merge_id")
+  createdAt DateTime @default(now()) @map("created_dt")
+
+  master Vendor @relation("MasterVendor", fields: [masterId], references: [id])
+  merged Vendor @relation("MergedVendor", fields: [mergeId], references: [id])
+
+  @@map("vendor_merge")
+}
+
+model VendorTypeHistory {
+  id                 Int                @id @default(autoincrement())
+  vendorId           Int                @map("vendor_id")
+  type               VendorType?
+  premiumrequestType PremiumRequestType @default(free) @map("premiumrequest_type")
+  premiumrequestAt   DateTime?          @map("premiumrequest_dt")
+  couponId           Int?               @map("coupon_id")
+
+  vendor Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  coupon Coupon? @relation(fields: [couponId], references: [id])
+
+  @@map("vendor_type_history")
+}
+
+// ============================================================
+// CATEGORY & TASKS
+// ============================================================
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(45)
+  alias     String   @unique @db.VarChar(45)
+  order     Int?
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_dt")
+  updatedAt DateTime? @updatedAt @map("updated_dt")
+
+  vendorCategories VendorCategory[]
+  vendorPhotoTags  VendorPhotoTag[]
+  tasks            Task[]
+  questions        CategoryQuestion[]
+  storyPhotoTags   WeddingStoryPhotoTag[]
+  storyVendors     WeddingStoryVendor[]
+
+  @@map("category")
+}
+
+model CategoryQuestion {
+  id           Int          @id @default(autoincrement())
+  categoryId   Int          @map("category_id")
+  parentId     Int?         @map("parent_id")
+  title        String       @db.VarChar(255)
+  questionType QuestionType @map("question_type")
+  isActive     Boolean      @default(true) @map("is_active")
+  order        Int?
+  createdAt    DateTime     @default(now()) @map("created_dt")
+
+  category Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  choices  CategoryQuestionChoice[]
+
+  @@map("category_question")
+}
+
+model CategoryQuestionChoice {
+  id         Int      @id @default(autoincrement())
+  questionId Int      @map("question_id")
+  choice     String   @db.VarChar(100)
+  order      Int?
+  createdAt  DateTime @default(now()) @map("created_dt")
+
+  question CategoryQuestion         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  CategoryQuestionAnswer[]
+
+  @@map("category_question_choice")
+}
+
+model CategoryQuestionAnswer {
+  id        Int      @id @default(autoincrement())
+  vendorId  Int      @map("vendor_id")
+  choiceId  Int      @map("choice_id")
+  createdAt DateTime @default(now()) @map("created_dt")
+
+  vendor Vendor                 @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  choice CategoryQuestionChoice @relation(fields: [choiceId], references: [id], onDelete: Cascade)
+
+  @@map("category_question_answer")
+}
+
+model Chapter {
+  id             Int       @id @default(autoincrement())
+  name           String    @db.VarChar(100)
+  order          Int
+  isPublic       Boolean   @default(true) @map("is_public")
+  createdByAdmin Int?      @map("created_by_admin")
+  createdByUser  Int?      @map("created_by_user")
+  createdAt      DateTime  @default(now()) @map("created_dt")
+  updatedAt      DateTime? @updatedAt @map("updated_dt")
+
+  tasks        Task[]
+  weddingTasks WeddingTask[]
+
+  @@map("chapter")
+}
+
+model Task {
+  id              Int       @id @default(autoincrement())
+  chapterId       Int       @map("chapter_id")
+  name            String    @db.VarChar(255)
+  budget          Float?
+  isPublic        Boolean   @default(true) @map("is_public")
+  categoryId      Int?      @map("category_id")
+  isBudgetDefined Boolean   @default(false) @map("is_budget_defined")
+  url             String?   @db.VarChar(100)
+  createdByAdmin  Int?      @map("created_by_admin")
+  createdByUser   Int?      @map("created_by_user")
+  createdAt       DateTime  @default(now()) @map("created_dt")
+  updatedAt       DateTime? @updatedAt @map("updated_dt")
+
+  chapter      Chapter       @relation(fields: [chapterId], references: [id])
+  category     Category?     @relation(fields: [categoryId], references: [id])
+  weddingTasks WeddingTask[]
+  taskBlogs    TaskBlog[]
+
+  @@map("task")
+}
+
+model TaskBlog {
+  id          Int       @id @default(autoincrement())
+  taskId      Int       @map("task_id")
+  logo        String?   @db.VarChar(100)
+  url         String    @db.VarChar(255)
+  title       String?   @db.VarChar(255)
+  ownerName   String?   @map("owner_name") @db.VarChar(255)
+  description String?   @db.VarChar(500)
+  createdAt   DateTime? @default(now()) @map("created_dt")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_blog")
+}
+
+// ============================================================
+// WEDDING & PLANNER
+// ============================================================
+
+model Wedding {
+  id             Int       @id @default(autoincrement())
+  storyId        Int?      @map("story_id")
+  photo          String?   @db.VarChar(100)
+  photoPosition  Int?      @map("photo_position")
+  weddingDate    DateTime? @map("wedding_date") @db.Date
+  estimateBudget Float?    @map("estimate_budget")
+  zipcode        String?   @db.VarChar(10)
+  location       String?   @db.VarChar(500)
+  alias          String?   @unique @db.VarChar(30)
+  code           String?   @db.VarChar(10)
+  createdBy      Int       @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_dt")
+  updatedAt      DateTime? @updatedAt @map("updated_dt")
+
+  creator      User             @relation(fields: [createdBy], references: [id])
+  planners     WeddingPlanner[]
+  tasks        WeddingTask[]
+  guests       WeddingGuest[]
+  attends      WeddingAttend[]
+  tables       WeddingTable[]
+  tags         WeddingTags[]
+  info         WeddingInfo[]
+
+  @@map("wedding")
+}
+
+model WeddingPlanner {
+  id          Int          @id @default(autoincrement())
+  weddingId   Int          @map("wedding_id")
+  plannerId   Int          @map("planner_id")
+  isFirstLogin Boolean     @default(true) @map("is_first_login")
+  taskView    TaskViewMode @default(LIST_SHOW) @map("task_view")
+
+  wedding Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  planner Planner @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+
+  @@map("wedding_planner")
+}
+
+model WeddingInfo {
+  id         Int             @id @default(autoincrement())
+  weddingId  Int             @map("wedding_id")
+  firstName  String          @map("first_name") @db.VarChar(100)
+  lastName   String?         @map("last_name") @db.VarChar(100)
+  type       WeddingInfoType
+  email      String?         @db.VarChar(100)
+  phone      String?         @db.VarChar(15)
+  isInvited  Boolean         @default(false) @map("is_invited")
+  createdBy  Int?            @map("created_by")
+  createdAt  DateTime?       @default(now()) @map("created_dt")
+  updatedAt  DateTime?       @updatedAt @map("updated_dt")
+
+  wedding Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  @@map("wedding_info")
+}
+
+model WeddingTask {
+  id        Int        @id @default(autoincrement())
+  weddingId Int        @map("wedding_id")
+  taskId    Int        @map("task_id")
+  chapterId Int        @map("chapter_id")
+  vendorId  Int?       @map("vendor_id")
+  status    TaskStatus @default(New)
+  deadline  DateTime?  @db.Date
+  order     Int
+  updatedBy Int?       @map("updated_by")
+  createdAt DateTime   @default(now()) @map("created_dt")
+  updatedAt DateTime?  @updatedAt @map("updated_dt")
+
+  wedding Wedding            @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  task    Task               @relation(fields: [taskId], references: [id])
+  chapter Chapter            @relation(fields: [chapterId], references: [id])
+  vendor  Vendor?            @relation(fields: [vendorId], references: [id])
+  budget  WeddingTaskBudget?
+  notes   WeddingTaskNote[]
+
+  @@map("wedding_task")
+}
+
+model WeddingTaskBudget {
+  id           Int       @id @default(autoincrement())
+  weddingId    Int       @map("wedding_id")
+  taskId       Int?      @map("task_id")
+  taskName     String?   @map("task_name") @db.VarChar(500)
+  budget       Float?
+  actualBudget Float?    @map("actual_budget")
+  isPaid       Boolean   @default(false) @map("is_paid")
+  updatedBy    Int?      @map("updated_by")
+  createdAt    DateTime  @default(now()) @map("created_dt")
+  updatedAt    DateTime? @updatedAt @map("updated_dt")
+
+  weddingTask WeddingTask? @relation(fields: [taskId], references: [id])
+
+  @@map("wedding_task_budget")
+}
+
+model WeddingTaskNote {
+  id            Int       @id @default(autoincrement())
+  weddingTaskId Int       @map("wedding_task_id")
+  note          String    @db.Text
+  createdBy     Int       @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_dt")
+  updatedAt     DateTime? @updatedAt @map("updated_dt")
+
+  weddingTask WeddingTask @relation(fields: [weddingTaskId], references: [id], onDelete: Cascade)
+
+  @@map("wedding_task_note")
+}
+
+model WeddingGuest {
+  id         Int        @id @default(autoincrement())
+  parentId   Int?       @map("parent_id")
+  weddingId  Int        @map("wedding_id")
+  attendId   Int?       @map("attend_id")
+  name       String     @db.VarChar(100)
+  type       GuestType  @default(adult)
+  guestEmail String?    @map("guest_email") @db.VarChar(100)
+  phone      String?    @db.VarChar(15)
+  street     String?    @db.VarChar(100)
+  streetNo   String?    @map("street_no") @db.VarChar(20)
+  zipcode    String?    @db.VarChar(6)
+  location   String?    @db.VarChar(100)
+  comment    String?    @db.VarChar(500)
+  rsvp       RsvpStatus @default(Pending)
+  tableId    Int?       @map("table_id")
+  createdBy  Int        @map("created_by")
+  createdAt  DateTime   @default(now()) @map("created_dt")
+  updatedAt  DateTime?  @updatedAt @map("updated_dt")
+
+  wedding  Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  parent   WeddingGuest?    @relation("GuestChildren", fields: [parentId], references: [id])
+  children WeddingGuest[]   @relation("GuestChildren")
+  table    WeddingTable?    @relation(fields: [tableId], references: [id])
+  tags     WeddingGuestTag[]
+
+  @@map("wedding_guest")
+}
+
+model WeddingAttend {
+  id         Int          @id @default(autoincrement())
+  parentId   Int?         @map("parent_id")
+  weddingId  Int          @map("wedding_id")
+  name       String       @db.VarChar(100)
+  type       GuestType    @default(adult)
+  guestEmail String?      @map("guest_email") @db.VarChar(100)
+  phone      String?      @db.VarChar(15)
+  street     String?      @db.VarChar(100)
+  streetNo   String?      @map("street_no") @db.VarChar(20)
+  zipcode    String?      @db.VarChar(6)
+  location   String?      @db.VarChar(100)
+  rsvp       RsvpStatus   @default(Pending)
+  status     AttendStatus?
+  isRead     Boolean      @default(false) @map("is_read")
+  createdBy  Int          @map("created_by")
+  createdAt  DateTime     @default(now()) @map("created_dt")
+  updatedAt  DateTime?    @updatedAt @map("updated_dt")
+
+  wedding Wedding        @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  parent  WeddingAttend? @relation("AttendChildren", fields: [parentId], references: [id])
+  children WeddingAttend[] @relation("AttendChildren")
+
+  @@map("wedding_attend")
+}
+
+model WeddingTable {
+  id        Int       @id @default(autoincrement())
+  weddingId Int       @map("wedding_id")
+  name      String    @db.VarChar(30)
+  seats     Int
+  createdAt DateTime? @default(now()) @map("created_dt")
+  updatedAt DateTime? @updatedAt @map("updated_dt")
+
+  wedding Wedding        @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  guests  WeddingGuest[]
+
+  @@map("wedding_table")
+}
+
+model WeddingTags {
+  id        Int      @id @default(autoincrement())
+  weddingId Int      @map("wedding_id")
+  name      String   @db.VarChar(100)
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_dt")
+  updatedAt DateTime? @updatedAt @map("updated_dt")
+
+  wedding  Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  guestTags WeddingGuestTag[]
+
+  @@map("wedding_tags")
+}
+
+model WeddingGuestTag {
+  id      Int @id @default(autoincrement())
+  guestId Int @map("guest_id")
+  tagId   Int @map("tag_id")
+
+  guest WeddingGuest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  tag   WeddingTags  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@map("wedding_guest_tag")
+}
+
+// ============================================================
+// WEDDING STORY
+// ============================================================
+
+model WeddingStory {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @map("user_id")
+  brideName           String    @map("bride_name") @db.VarChar(20)
+  groomName           String    @map("groom_name") @db.VarChar(20)
+  contactEmail        String    @map("contact_email") @db.VarChar(100)
+  zipcode             String?   @db.VarChar(10)
+  location            String?   @db.VarChar(500)
+  weddingDate         DateTime  @map("wedding_date") @db.Date
+  coverphoto          String?   @db.VarChar(100)
+  coverphotoPosiiton  String?   @map("coverphoto_position") @db.VarChar(25)
+  alias               String?   @unique @db.VarChar(30)
+  rejectReason        String?   @map("reject_reason") @db.VarChar(500)
+  isPublished         Boolean   @default(false) @map("is_published")
+  isComplete          Boolean   @default(false) @map("is_complete")
+  isApproved          Boolean   @default(false) @map("is_approved")
+  isStartPage         Boolean   @default(false) @map("is_start_page")
+  isHidden            Boolean   @default(false) @map("is_hidden")
+  approvedBy          Int?      @map("approved_by")
+  approvedAt          DateTime? @map("approved_dt")
+  createdAt           DateTime? @default(now()) @map("created_dt")
+
+  user      User                   @relation(fields: [userId], references: [id])
+  photos    WeddingStoryPhoto[]
+  vendors   WeddingStoryVendor[]
+  likes     WeddingStoryLike[]
+  analytics StoryAnalytics[]
+
+  @@map("wedding_story")
+}
+
+model WeddingStoryPhoto {
+  id         Int       @id @default(autoincrement())
+  storyId    Int       @map("story_id")
+  photoName  String    @map("photo_name") @db.VarChar(100)
+  size       Float
+  order      Int?      @db.SmallInt
+  isApproved Boolean   @map("is_approved")
+  approvedBy Int?      @map("approved_by")
+  approvedAt DateTime? @map("approved_dt")
+  createdAt  DateTime  @default(now()) @map("created_dt")
+
+  story WeddingStory               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  tags  WeddingStoryPhotoTag[]
+  likes WeddingStoryPhotoLikes[]
+
+  @@map("wedding_story_photo")
+}
+
+model WeddingStoryPhotoTag {
+  id         Int      @id @default(autoincrement())
+  photoId    Int      @map("photo_id")
+  vendorId   Int      @map("vendor_id")
+  categoryId Int      @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_dt")
+
+  photo    WeddingStoryPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  vendor   Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category Category          @relation(fields: [categoryId], references: [id])
+
+  @@map("wedding_story_photo_tag")
+}
+
+model WeddingStoryPhotoLikes {
+  id        Int       @id @default(autoincrement())
+  photoId   Int       @map("photo_id")
+  userId    Int       @map("user_id")
+  createdAt DateTime? @default(now()) @map("created_dt")
+
+  photo WeddingStoryPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@map("wedding_story_photo_likes")
+}
+
+model WeddingStoryVendor {
+  id          Int       @id @default(autoincrement())
+  storyId     Int       @map("story_id")
+  vendorId    Int       @map("vendor_id")
+  categoryId  Int       @map("category_id")
+  rating      Float?
+  comment     String?   @db.VarChar(500)
+  commentAt   DateTime? @map("comment_dt")
+  isAnonymous Boolean   @default(false) @map("is_anonymous")
+  isApproved  Boolean   @default(false) @map("is_approved")
+  approvedBy  Int?      @map("approved_by")
+  approvedAt  DateTime? @map("approved_dt")
+  createdAt   DateTime? @default(now()) @map("created_dt")
+
+  story    WeddingStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  vendor   Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id])
+
+  @@map("wedding_story_vendor")
+}
+
+model WeddingStoryLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  storyId   Int      @map("story_id")
+  createdAt DateTime @default(now()) @map("created_dt")
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story WeddingStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@map("wedding_story_like")
+}
+
+// ============================================================
+// MESSAGING
+// ============================================================
+
+model Message {
+  id           Int               @id @default(autoincrement())
+  threadId     Int               @map("thread_id")
+  senderId     Int               @map("sender_id")
+  receiverId   Int               @map("receiver_id")
+  message      String?           @db.VarChar(1000)
+  senderType   MessageSenderType? @map("sender_type")
+  receiverType MessageSenderType? @map("receiver_type")
+  isRead       Boolean           @default(false) @map("read")
+  isNotified   Boolean           @default(false) @map("is_notified")
+  createdAt    DateTime          @default(now()) @map("created_dt")
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("message")
+}
+
+// ============================================================
+// ANALYTICS
+// ============================================================
+
+model Analytics {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  vendorId  Int      @map("vendor_id")
+  ipAddress String   @map("ip_address") @db.VarChar(50)
+  visitedAt DateTime @map("visited_dt")
+
+  user   User?  @relation(fields: [userId], references: [id])
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@map("analytics")
+}
+
+model StoryAnalytics {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  storyId   Int      @map("story_id")
+  ipAddress String   @map("ip_address") @db.VarChar(50)
+  visitedAt DateTime @map("visited_dt")
+
+  user  User?        @relation(fields: [userId], references: [id])
+  story WeddingStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@map("story_analytics")
+}
+
+model WeddingTaskAnalytics {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  ipAddress String   @map("ip_address") @db.VarChar(50)
+  visitedAt DateTime @map("visited_dt")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("wedding_task_analytics")
+}
+
+model WeddingTaskBudgetAnalytics {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  ipAddress String   @map("ip_address") @db.VarChar(50)
+  visitedAt DateTime @map("visited_dt")
+
+  @@map("wedding_task_budget_analytics")
+}
+
+// ============================================================
+// COUPON, AFFILIATE, CASHBACK
+// ============================================================
+
+model Coupon {
+  id        Int        @id @default(autoincrement())
+  code      String     @unique @db.VarChar(20)
+  value     Float
+  unit      CouponUnit @default(Percent)
+  isActive  Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_dt")
+
+  vendorTypeHistory VendorTypeHistory[]
+
+  @@map("coupon")
+}
+
+model AffiliateAnalytics {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  codeId    Int      @map("code_id")
+  ipAddress String   @map("ip_address") @db.VarChar(50)
+  visitedAt DateTime @map("visited_dt")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("affiliate_analytics")
+}
+
+model Cashback {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  amount    Float
+  status    String   @default("pending") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_dt")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("cashback")
+}
+
+// ============================================================
+// BUDGET VENDOR PLACEMENT (Admin-Feature)
+// ============================================================
+
+model BudgetVendorPlacement {
+  id        Int      @id @default(autoincrement())
+  vendorId  Int      @map("vendor_id")
+  taskId    Int?     @map("task_id")
+  from      DateTime? @map("from")
+  to        DateTime? @map("to")
+  createdAt DateTime @default(now()) @map("created_dt")
+
+  vendor     Vendor                          @relation(fields: [vendorId], references: [id])
+  analytics  BudgetVendorPlacementAnalytics[]
+
+  @@map("budget_vendor_placement")
+}
+
+model BudgetVendorPlacementAnalytics {
+  id          Int      @id @default(autoincrement())
+  placementId Int      @map("placement_id")
+  userId      Int?     @map("user_id")
+  ipAddress   String   @map("ip_address") @db.VarChar(50)
+  visitedAt   DateTime @map("visited_dt")
+
+  placement BudgetVendorPlacement @relation(fields: [placementId], references: [id])
+
+  @@map("budget_vendor_placement_analytics")
+}
+
+// ============================================================
+// MISC
+// ============================================================
+
+model Newsletter {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(100)
+  email        String    @unique @db.VarChar(100)
+  subscribedAt DateTime? @default(now()) @map("subscribed_dt")
+
+  @@map("newsletter")
+}
+
+model Feedback {
+  id        Int       @id @default(autoincrement())
+  userId    Int?      @map("user_id")
+  feedback  String    @db.Text
+  createdAt DateTime? @default(now()) @map("created_dt")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("feedback")
+}

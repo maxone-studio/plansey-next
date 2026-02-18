@@ -1,0 +1,36 @@
+{
+  "title": "Plansey – Deine Hochzeitsplanung",
+  "description": "Plane deine Traumhochzeit mit Plansey. Finde Dienstleister, verwalte Gäste, Budget und Aufgaben.",
+  "tagline": "Deine Hochzeit. Dein Plan.",
+  "hero": {
+    "headline": "Plane deine Traumhochzeit",
+    "subheadline": "Alles was du brauchst – Aufgaben, Budget, Gäste und die besten Dienstleister in deiner Nähe.",
+    "cta_planner": "Jetzt kostenlos starten",
+    "cta_vendor": "Als Dienstleister registrieren",
+    "cta_stories": "Hochzeits-Inspirationen entdecken"
+  },
+  "features": {
+    "title": "Alles für deine perfekte Hochzeit",
+    "checklist": {
+      "title": "Checkliste & Aufgaben",
+      "description": "Behalte den Überblick mit unserer intelligenten Aufgabenliste – von der Planung bis zum großen Tag."
+    },
+    "budget": {
+      "title": "Budget-Verwaltung",
+      "description": "Plane dein Budget und behalte die Kosten im Blick – geplant vs. tatsächlich."
+    },
+    "guests": {
+      "title": "Gästeliste & RSVP",
+      "description": "Verwalte deine Gäste, versende RSVP-Links und plane die Tischordnung."
+    },
+    "vendors": {
+      "title": "Dienstleister finden",
+      "description": "Entdecke Fotografen, Floristen, Locations und mehr in deiner Nähe."
+    }
+  },
+  "stats": {
+    "vendors": "Dienstleister",
+    "stories": "Hochzeitsgeschichten",
+    "couples": "Glückliche Paare"
+  }
+}

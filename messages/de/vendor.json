@@ -1,0 +1,46 @@
+{
+  "profile": {
+    "title": "Mein Profil",
+    "name": "Firmenname",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "website": "Website",
+    "description": "Kurzbeschreibung (max. 140 Zeichen)",
+    "additional_info": "Weitere Informationen",
+    "logo": "Logo",
+    "cover_photo": "Titelbild",
+    "alias": "Persönliche URL",
+    "type_premium": "Premium",
+    "type_basic": "Basic",
+    "type_basic_plus": "Basic Plus",
+    "type_unclaimed": "Nicht beansprucht",
+    "request_premium": "Premium anfragen"
+  },
+  "address": {
+    "title": "Standort",
+    "street": "Straße",
+    "street_no": "Hausnummer",
+    "zipcode": "PLZ",
+    "city": "Stadt",
+    "additional": "Weiterer Standort",
+    "online": "Online-Dienstleister (kein fester Standort)"
+  },
+  "photos": {
+    "title": "Portfolio",
+    "upload": "Fotos hochladen",
+    "max_size": "Max. 2 MB pro Foto"
+  },
+  "deals": {
+    "title": "Angebote & Rabatte",
+    "add": "Angebot hinzufügen",
+    "discount": "Rabatt",
+    "code": "Rabattcode",
+    "valid_from": "Gültig ab",
+    "valid_to": "Gültig bis",
+    "conditions": "Bedingungen"
+  },
+  "categories": {
+    "title": "Kategorien",
+    "select": "Kategorien auswählen"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "dashboard": {
+    "title": "Mein Dashboard",
+    "countdown": "{days} Tage bis zur Hochzeit",
+    "tasks_progress": "{done} von {total} Aufgaben erledigt",
+    "budget_summary": "Budget-Übersicht",
+    "guests_summary": "Gäste",
+    "upcoming_tasks": "Nächste Aufgaben"
+  },
+  "wedding": {
+    "title": "Hochzeits-Einstellungen",
+    "wedding_date": "Hochzeitsdatum",
+    "location": "Ort",
+    "zipcode": "PLZ",
+    "budget": "Geschätztes Budget",
+    "alias": "Persönliche URL",
+    "cover_photo": "Titelbild",
+    "create": "Hochzeit erstellen",
+    "edit": "Hochzeit bearbeiten"
+  },
+  "tasks": {
+    "title": "Aufgaben & Checkliste",
+    "new": "Neu",
+    "inprogress": "In Bearbeitung",
+    "done": "Erledigt",
+    "add_task": "Aufgabe hinzufügen",
+    "deadline": "Fälligkeitsdatum",
+    "vendor": "Dienstleister",
+    "notes": "Notizen",
+    "status": "Status"
+  },
+  "budget": {
+    "title": "Budget-Verwaltung",
+    "planned": "Geplant",
+    "actual": "Tatsächlich",
+    "difference": "Differenz",
+    "total_planned": "Gesamtbudget",
+    "total_actual": "Tatsächliche Kosten",
+    "paid": "Bezahlt"
+  },
+  "guests": {
+    "title": "Gästeliste",
+    "add_guest": "Gast hinzufügen",
+    "rsvp_yes": "Zugesagt",
+    "rsvp_no": "Abgesagt",
+    "rsvp_pending": "Ausstehend",
+    "adults": "Erwachsene",
+    "children": "Kinder",
+    "table": "Tisch",
+    "tags": "Gruppen"
+  },
+  "seating": {
+    "title": "Tischplanung",
+    "add_table": "Tisch hinzufügen",
+    "table_name": "Tischname",
+    "seats": "Sitzplätze",
+    "unassigned": "Nicht zugewiesen"
+  }
+}

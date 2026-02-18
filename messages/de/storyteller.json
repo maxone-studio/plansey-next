@@ -1,0 +1,25 @@
+{
+  "dashboard": {
+    "title": "Meine Stories",
+    "create": "Story erstellen"
+  },
+  "story": {
+    "bride_name": "Name der Braut",
+    "groom_name": "Name des Bräutigams",
+    "contact_email": "Kontakt-E-Mail",
+    "wedding_date": "Hochzeitsdatum",
+    "location": "Ort",
+    "zipcode": "PLZ",
+    "cover_photo": "Titelbild",
+    "alias": "Persönliche URL",
+    "photos": "Fotos hochladen",
+    "vendors": "Dienstleister taggen",
+    "publish": "Veröffentlichen",
+    "unpublish": "Zurückziehen",
+    "preview": "Vorschau",
+    "status_draft": "Entwurf",
+    "status_submitted": "Eingereicht",
+    "status_approved": "Genehmigt",
+    "status_rejected": "Abgelehnt"
+  }
+}
