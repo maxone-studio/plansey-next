@@ -97,17 +97,17 @@ enum CouponUnit {
 }
 
 // ============================================================
-// USER & AUTH
+// USER & AUTH (NextAuth.js v5 compatible)
 // ============================================================
 
 model User {
-  id                  Int             @id @default(autoincrement())
+  id                  String          @id @default(cuid())
   email               String          @unique @db.VarChar(100)
+  emailVerified       DateTime?       @map("email_verified")
   password            String?         @db.VarChar(255)
   firstName           String?         @map("first_name") @db.VarChar(30)
   lastName            String?         @map("last_name") @db.VarChar(30)
-  authKey             String          @map("auth_key") @db.VarChar(32)
-  passwordResetToken  String?         @map("password_reset_token") @db.VarChar(255)
+  image               String?
   isFirstLogin        Boolean         @default(true) @map("is_first_login")
   isActive            Boolean         @default(true) @map("is_active")
   isSubscribed        Boolean         @default(false) @map("is_subscribed")
@@ -116,6 +116,11 @@ model User {
   createdAt           DateTime        @default(now()) @map("created_dt")
   updatedAt           DateTime?       @updatedAt @map("updated_dt")
 
+  // NextAuth relations
+  accounts            Account[]
+  sessions            Session[]
+
+  // App relations
   planner             Planner?
   storyteller         Storyteller?
   vendor              Vendor?
@@ -125,6 +130,7 @@ model User {
   vendorLikes         VendorLike[]
   vendorClaims        VendorClaim[]
   weddingStories      WeddingStory[]
+  weddingStoryLikes   WeddingStoryLike[]
   analytics           Analytics[]
   storyAnalytics      StoryAnalytics[]
   taskAnalytics       WeddingTaskAnalytics[]
@@ -133,6 +139,47 @@ model User {
   cashbacks           Cashback[]
 
   @@map("user")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_token")
 }
 
 model Admin {
@@ -149,7 +196,7 @@ model Admin {
 
 model Planner {
   id         Int          @id @default(autoincrement())
-  userId     Int          @unique @map("user_id")
+  userId     String       @unique @map("user_id")
   firstName  String?      @map("first_name") @db.VarChar(30)
   lastName   String?      @map("last_name") @db.VarChar(30)
   isActive   Boolean      @default(true) @map("is_active")
@@ -165,7 +212,7 @@ model Planner {
 
 model Storyteller {
   id        Int       @id @default(autoincrement())
-  userId    Int       @unique @map("user_id")
+  userId    String    @unique @map("user_id")
   firstName String?   @map("first_name") @db.VarChar(30)
   lastName  String?   @map("last_name") @db.VarChar(30)
   isActive  Boolean   @default(true) @map("is_active")
@@ -183,7 +230,7 @@ model Storyteller {
 
 model Vendor {
   id                  Int                @id @default(autoincrement())
-  userId              Int                @map("user_id")
+  userId              String             @unique @map("user_id")
   name                String             @db.VarChar(100)
   email               String             @db.VarChar(100)
   phone               String?            @db.VarChar(24)
@@ -223,6 +270,7 @@ model Vendor {
   mergesAsMaster          VendorMerge[]                @relation("MasterVendor")
   mergesAsMerged          VendorMerge[]                @relation("MergedVendor")
   weddingTasks            WeddingTask[]
+  photoTags               VendorPhotoTag[]
   storyPhotoTags          WeddingStoryPhotoTag[]
   storyVendors            WeddingStoryVendor[]
   analytics               Analytics[]
@@ -281,7 +329,7 @@ model VendorPhoto {
 model VendorPhotoLikes {
   id        Int       @id @default(autoincrement())
   photoId   Int       @map("photo_id")
-  userId    Int       @map("user_id")
+  userId    String       @map("user_id")
   createdAt DateTime? @default(now()) @map("created_dt")
 
   photo VendorPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
@@ -305,7 +353,7 @@ model VendorPhotoTag {
 
 model VendorLike {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  userId    String      @map("user_id")
   vendorId  Int      @map("vendor_id")
   createdAt DateTime @default(now()) @map("created_dt")
 
@@ -318,7 +366,7 @@ model VendorLike {
 
 model VendorClaim {
   id         Int       @id @default(autoincrement())
-  userId     Int       @map("user_id")
+  userId     String       @map("user_id")
   vendorId   Int       @map("vendor_id")
   isApproved Boolean   @default(false) @map("is_approved")
   approvedBy Int?      @map("approved_by")
@@ -510,7 +558,7 @@ model Wedding {
   location       String?   @db.VarChar(500)
   alias          String?   @unique @db.VarChar(30)
   code           String?   @db.VarChar(10)
-  createdBy      Int       @map("created_by")
+  createdBy      String    @map("created_by")
   createdAt      DateTime  @default(now()) @map("created_dt")
   updatedAt      DateTime? @updatedAt @map("updated_dt")
 
@@ -583,7 +631,7 @@ model WeddingTask {
 model WeddingTaskBudget {
   id           Int       @id @default(autoincrement())
   weddingId    Int       @map("wedding_id")
-  taskId       Int?      @map("task_id")
+  taskId       Int? @unique      @map("task_id")
   taskName     String?   @map("task_name") @db.VarChar(500)
   budget       Float?
   actualBudget Float?    @map("actual_budget")
@@ -710,7 +758,7 @@ model WeddingGuestTag {
 
 model WeddingStory {
   id                  Int       @id @default(autoincrement())
-  userId              Int       @map("user_id")
+  userId              String       @map("user_id")
   brideName           String    @map("bride_name") @db.VarChar(20)
   groomName           String    @map("groom_name") @db.VarChar(20)
   contactEmail        String    @map("contact_email") @db.VarChar(100)
@@ -774,7 +822,7 @@ model WeddingStoryPhotoTag {
 model WeddingStoryPhotoLikes {
   id        Int       @id @default(autoincrement())
   photoId   Int       @map("photo_id")
-  userId    Int       @map("user_id")
+  userId    String       @map("user_id")
   createdAt DateTime? @default(now()) @map("created_dt")
 
   photo WeddingStoryPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
@@ -805,7 +853,7 @@ model WeddingStoryVendor {
 
 model WeddingStoryLike {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  userId    String      @map("user_id")
   storyId   Int      @map("story_id")
   createdAt DateTime @default(now()) @map("created_dt")
 
@@ -823,8 +871,8 @@ model WeddingStoryLike {
 model Message {
   id           Int               @id @default(autoincrement())
   threadId     Int               @map("thread_id")
-  senderId     Int               @map("sender_id")
-  receiverId   Int               @map("receiver_id")
+  senderId     String               @map("sender_id")
+  receiverId   String               @map("receiver_id")
   message      String?           @db.VarChar(1000)
   senderType   MessageSenderType? @map("sender_type")
   receiverType MessageSenderType? @map("receiver_type")
@@ -844,7 +892,7 @@ model Message {
 
 model Analytics {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+  userId    String?     @map("user_id")
   vendorId  Int      @map("vendor_id")
   ipAddress String   @map("ip_address") @db.VarChar(50)
   visitedAt DateTime @map("visited_dt")
@@ -857,7 +905,7 @@ model Analytics {
 
 model StoryAnalytics {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+  userId    String?     @map("user_id")
   storyId   Int      @map("story_id")
   ipAddress String   @map("ip_address") @db.VarChar(50)
   visitedAt DateTime @map("visited_dt")
@@ -870,7 +918,7 @@ model StoryAnalytics {
 
 model WeddingTaskAnalytics {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+  userId    String?     @map("user_id")
   ipAddress String   @map("ip_address") @db.VarChar(50)
   visitedAt DateTime @map("visited_dt")
 
@@ -881,7 +929,7 @@ model WeddingTaskAnalytics {
 
 model WeddingTaskBudgetAnalytics {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+  userId    String?     @map("user_id")
   ipAddress String   @map("ip_address") @db.VarChar(50)
   visitedAt DateTime @map("visited_dt")
 
@@ -907,7 +955,7 @@ model Coupon {
 
 model AffiliateAnalytics {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+  userId    String?     @map("user_id")
   codeId    Int      @map("code_id")
   ipAddress String   @map("ip_address") @db.VarChar(50)
   visitedAt DateTime @map("visited_dt")
@@ -919,7 +967,7 @@ model AffiliateAnalytics {
 
 model Cashback {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  userId    String      @map("user_id")
   amount    Float
   status    String   @default("pending") @db.VarChar(20)
   createdAt DateTime @default(now()) @map("created_dt")
@@ -936,7 +984,7 @@ model Cashback {
 model BudgetVendorPlacement {
   id        Int      @id @default(autoincrement())
   vendorId  Int      @map("vendor_id")
-  taskId    Int?     @map("task_id")
+  taskId    Int? @unique     @map("task_id")
   from      DateTime? @map("from")
   to        DateTime? @map("to")
   createdAt DateTime @default(now()) @map("created_dt")
@@ -950,7 +998,7 @@ model BudgetVendorPlacement {
 model BudgetVendorPlacementAnalytics {
   id          Int      @id @default(autoincrement())
   placementId Int      @map("placement_id")
-  userId      Int?     @map("user_id")
+  userId      String?     @map("user_id")
   ipAddress   String   @map("ip_address") @db.VarChar(50)
   visitedAt   DateTime @map("visited_dt")
 
@@ -974,7 +1022,7 @@ model Newsletter {
 
 model Feedback {
   id        Int       @id @default(autoincrement())
-  userId    Int?      @map("user_id")
+  userId    String?      @map("user_id")
   feedback  String    @db.Text
   createdAt DateTime? @default(now()) @map("created_dt")
 
