@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import {
   Heart,
   CheckSquare,
@@ -10,19 +11,42 @@ import {
   Camera,
   ArrowRight,
   Sparkles,
+  Calendar,
+  MapPin,
+  Pencil,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import type { Session } from "next-auth";
+import type { Wedding } from "@prisma/client";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const session = await auth();
+  if (!session?.user) redirect("/de/auth/login");
 
-  if (!session?.user) {
-    redirect("/de/auth/login");
-  }
-
+  const { locale } = await params;
   const role = session.user.defaultAccount || "planner";
   const firstName = session.user.name?.split(" ")[0] ?? "dort";
+
+  // Load wedding for planners
+  let wedding: Wedding | null = null;
+  if (role === "planner") {
+    const planner = await db.planner.findUnique({
+      where: { userId: session.user.id },
+      include: {
+        weddingPlanners: {
+          include: { wedding: true },
+          orderBy: { id: "desc" },
+          take: 1,
+        },
+      },
+    });
+    wedding = planner?.weddingPlanners?.[0]?.wedding ?? null;
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -42,19 +66,38 @@ export default async function DashboardPage() {
       </div>
 
       {/* Role-specific dashboard */}
-      {role === "planner" && <PlannerDashboard session={session} />}
-      {role === "vendor" && <VendorDashboard session={session} />}
-      {role === "storyteller" && <StorytellerDashboard session={session} />}
+      {role === "planner" && (
+        <PlannerDashboard session={session} wedding={wedding} locale={locale} />
+      )}
+      {role === "vendor" && <VendorDashboard session={session} locale={locale} />}
+      {role === "storyteller" && (
+        <StorytellerDashboard session={session} locale={locale} />
+      )}
     </div>
   );
 }
 
-function PlannerDashboard({ session }: { session: Session }) {
-  const locale = "de";
+function getDaysUntilWedding(weddingDate: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(weddingDate);
+  target.setHours(0, 0, 0, 0);
+  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function PlannerDashboard({
+  session,
+  wedding,
+  locale,
+}: {
+  session: Session;
+  wedding: Wedding | null;
+  locale: string;
+}) {
   return (
     <div className="space-y-6">
-      {/* Setup banner for first login */}
-      {session?.user.isFirstLogin && (
+      {/* No wedding yet – setup banner */}
+      {!wedding && (
         <div className="rounded-xl bg-gradient-to-r from-primary/10 to-plansey-blush border border-primary/20 p-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 rounded-full bg-primary/10 p-2">
@@ -77,6 +120,11 @@ function PlannerDashboard({ session }: { session: Session }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Wedding card – if exists */}
+      {wedding && (
+        <WeddingCard wedding={wedding} locale={locale} />
       )}
 
       {/* Quick actions */}
@@ -110,11 +158,119 @@ function PlannerDashboard({ session }: { session: Session }) {
   );
 }
 
-function VendorDashboard({ session: _session }: { session: Session }) {
-  const locale = "de";
+function WeddingCard({ wedding, locale }: { wedding: Wedding; locale: string }) {
+  const daysUntil = wedding.weddingDate
+    ? getDaysUntilWedding(new Date(wedding.weddingDate))
+    : null;
+
+  const dateFormatted = wedding.weddingDate
+    ? new Date(wedding.weddingDate).toLocaleDateString("de-DE", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-background p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Heart className="h-5 w-5 fill-primary text-primary" />
+          <h2 className="font-semibold text-foreground">Meine Hochzeit</h2>
+        </div>
+        <Link
+          href={`/${locale}/dashboard/wedding/${wedding.id}/edit`}
+          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Pencil className="h-3 w-3" />
+          Bearbeiten
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* Countdown */}
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2">
+            <Clock className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Countdown</p>
+            {daysUntil !== null ? (
+              <p className="font-semibold text-foreground">
+                {daysUntil > 0
+                  ? `${daysUntil} Tage`
+                  : daysUntil === 0
+                  ? "Heute! 🎉"
+                  : `vor ${Math.abs(daysUntil)} Tagen`}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Noch kein Datum</p>
+            )}
+          </div>
+        </div>
+
+        {/* Date */}
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2">
+            <Calendar className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Datum</p>
+            {dateFormatted ? (
+              <p className="font-semibold text-foreground text-sm">{dateFormatted}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Nicht gesetzt</p>
+            )}
+          </div>
+        </div>
+
+        {/* Location */}
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2">
+            <MapPin className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Ort</p>
+            {wedding.location ? (
+              <p className="font-semibold text-foreground text-sm">
+                {wedding.zipcode ? `${wedding.zipcode} ` : ""}
+                {wedding.location}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Nicht gesetzt</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Budget bar */}
+      {wedding.estimateBudget && (
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Geplantes Budget</span>
+            <span className="font-semibold text-foreground">
+              {new Intl.NumberFormat("de-DE", {
+                style: "currency",
+                currency: "EUR",
+                maximumFractionDigits: 0,
+              }).format(wedding.estimateBudget)}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VendorDashboard({
+  session: _session,
+  locale,
+}: {
+  session: Session;
+  locale: string;
+}) {
   return (
     <div className="space-y-6">
-      {/* Setup banner */}
       <div className="rounded-xl bg-gradient-to-r from-plansey-gold/10 to-background border border-plansey-gold/20 p-6">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 rounded-full bg-plansey-gold/10 p-2">
@@ -160,8 +316,13 @@ function VendorDashboard({ session: _session }: { session: Session }) {
   );
 }
 
-function StorytellerDashboard({ session: _session }: { session: Session }) {
-  const locale = "de";
+function StorytellerDashboard({
+  session: _session,
+  locale,
+}: {
+  session: Session;
+  locale: string;
+}) {
   return (
     <div className="space-y-6">
       <div className="rounded-xl bg-gradient-to-r from-blue-50 to-background border border-blue-200 p-6">
