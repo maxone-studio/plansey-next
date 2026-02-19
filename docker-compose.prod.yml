@@ -13,7 +13,7 @@ services:
       - coolify
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.plansey-next.rule=Host(`plansey.app`) || Host(`www.plansey.app`)"
+      - "traefik.http.routers.plansey-next.rule=Host(`new.plansey.de`)"
       - traefik.http.routers.plansey-next.entrypoints=https
       - traefik.http.routers.plansey-next.tls=true
       - traefik.http.routers.plansey-next.tls.certresolver=letsencrypt
