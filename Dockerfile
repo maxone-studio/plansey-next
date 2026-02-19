@@ -1,6 +1,6 @@
 # Stage 1: Dependencies
 FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl openssl-dev
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -8,10 +8,14 @@ RUN npm ci --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:22-alpine AS builder
+RUN apk add --no-cache openssl openssl-dev
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Ensure public directory exists
+RUN mkdir -p public
 
 # Generate Prisma Client
 RUN npx prisma generate
@@ -23,6 +27,7 @@ RUN npm run build
 
 # Stage 3: Runner
 FROM node:22-alpine AS runner
+RUN apk add --no-cache openssl openssl-dev
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -31,6 +36,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy public (may be empty but must exist)
+RUN mkdir -p public
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
